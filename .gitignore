@@ -1,0 +1,60 @@
+# --- Notes de travail locales ---
+notes/
+
+# --- Secrets : ne jamais retirer ces lignes ---
+.env
+.env.*
+*.key
+*.pem
+secrets.toml
+.streamlit/secrets.toml
+
+# --- Données : jamais versionnées ---
+donnees/brut/*
+!donnees/brut/README.md
+donnees/traite/*
+!donnees/traite/.gitkeep
+*.csv
+*.xlsx
+*.parquet
+*.db
+*.sqlite3
+# Exception : les petits fichiers de référence utiles au projet
+!donnees/reference/*.csv
+!donnees/reference/*.geojson
+# Exception : les tableaux agreges (petits) que lit l'application deployee.
+# Sans eux, la demo en ligne devrait retelecharger et retraiter les donnees brutes.
+!donnees/agrege/*.csv
+
+# --- Modèles entraînés (lourds) ---
+*.pkl
+*.joblib
+*.pt
+*.h5
+modeles/*
+!modeles/.gitkeep
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+
+# --- Notebooks ---
+.ipynb_checkpoints/
+
+# --- Environnement de travail ---
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+~$*

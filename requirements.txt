@@ -1,0 +1,22 @@
+# Socle commun. Retirer ce qui ne sert pas au projet : un requirements.txt
+# qui installe 40 paquets pour en utiliser 4 est un signal de negligence.
+pandas>=2.0
+numpy>=1.24
+requests>=2.31
+python-dotenv>=1.0
+matplotlib>=3.7
+
+# Restitution (si le projet a une interface)
+# streamlit>=1.30
+# plotly>=5.18
+
+# Validation des donnees (fortement recommande des qu'il y a un import de fichier)
+# pandera>=0.18
+
+# Developpement (installes par la CI, pas necessaires a l'execution)
+# pytest>=8.0
+# ruff>=0.3
+
+# Notebook et restitution
+jupyter>=1.0
+notebook>=7.0

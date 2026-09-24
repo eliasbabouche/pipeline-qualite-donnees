@@ -1,0 +1,17 @@
+# Configuration des outils de developpement (pas de packaging ici).
+
+[tool.pytest.ini_options]
+# Permet aux tests d'ecrire "from src import ..." sans bricoler sys.path.
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+# Regles choisies explicitement : sans cette liste, une nouvelle version de ruff
+# peut changer ses regles par defaut et faire echouer la CI sans qu'on ait rien touche.
+# E/W : style PEP 8   F : erreurs reelles (import inutilise, variable non definie)
+# I : ordre des imports
+select = ["E", "W", "F", "I"]
