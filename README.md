@@ -1,8 +1,8 @@
 ﻿# pipeline-qualite-donnees
 
-[![Tests](https://github.com/eliasbabouche/NOM-DU-DEPOT/actions/workflows/tests.yml/badge.svg)](https://github.com/eliasbabouche/NOM-DU-DEPOT/actions/workflows/tests.yml)
+[![Tests](https://github.com/eliasbabouche/pipeline-qualite-donnees/actions/workflows/tests.yml/badge.svg)](https://github.com/eliasbabouche/pipeline-qualite-donnees/actions/workflows/tests.yml)
 [![Démo](https://img.shields.io/badge/démo-en%20ligne-brightgreen)](LIEN-DE-LA-DEMO)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/eliasbabouche/NOM-DU-DEPOT/blob/main/notebooks/01_restitution.ipynb)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/eliasbabouche/pipeline-qualite-donnees/blob/main/notebooks/01_restitution.ipynb)
 
 > Pipeline de données mensuel en couches bronze/silver/gold sur la régularité des TGV : ingestion idempotente, validation pandera, dbt, Dagster
 
@@ -120,6 +120,45 @@ donnees/      brut/ et traite/ non versionnés ; reference/ et agrege/ versionn�
 Le code vit dans `src/` et reste testable ; le notebook importe depuis `src/` et raconte
 l'histoire. Ses sorties sont volontairement conservées dans le fichier pour que les
 graphiques s'affichent sur GitHub sans rien exécuter.
+
+## Questions fréquentes
+
+<details>
+<summary><b>Pourquoi la clé d'unicité inclut-elle la colonne <code>service</code> ?</b></summary>
+
+J'ai d'abord supposé qu'une ligne était identifiée par le mois, la gare de départ et la gare
+d'arrivée. En le vérifiant, j'ai trouvé 42 lignes qui violaient cette règle, toutes sur juillet,
+août et septembre 2025 : pendant ces trois mois, la SNCF a découpé certaines liaisons en deux
+lignes, trafic national et trafic international, avant de revenir au format habituel. Ce
+n'étaient pas des doublons mais deux moitiés d'une même liaison : Dijon → Paris Lyon en
+juillet 2025, c'est 186 trains « International » plus 220 « National ».
+
+Sans cette vérification, le pipeline aurait soit échoué sans explication, soit, pire, dédoublonné
+en silence et retiré environ 7 000 trains des statistiques. La clé
+`date + gare_depart + gare_arrivee + service` (zéro conflit sur 12 544 lignes) est donc écrite
+dans le contrat de données, et un test d'unicité fait échouer le pipeline au lieu de corriger en
+douce.
+
+</details>
+
+<details>
+<summary><b>Qu'est-ce que l'exploration manuelle de la source a changé au code ?</b></summary>
+
+Quatre constats, chacun avec une conséquence directe :
+
+- **Le fichier commence par un BOM UTF-8.** Il est lu en `utf-8-sig` ; sinon la première colonne
+  s'appelle `﻿date` et tout accès à `date` échoue.
+- **La colonne `date` est un mois (`2025-07`), pas une date.** Elle reste une période mensuelle
+  et sert de clé de partition ; la convertir en date inventerait un « 1er du mois » absent des
+  données.
+- **Les commentaires contiennent des retours à la ligne entre guillemets.** Le fichier fait
+  15 062 lignes physiques pour 12 544 lignes de données : les lignes ne se comptent jamais à la
+  main, seulement via un lecteur CSV qui gère les guillemets.
+- **Chaque export contient tout l'historique depuis 2018.** C'est un *snapshot*, pas un *delta* :
+  chaque téléchargement est archivé tel quel en bronze, et silver est reconstruit à partir du
+  plus récent.
+
+</details>
 
 ## Licence
 
