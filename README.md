@@ -160,6 +160,28 @@ Quatre constats, chacun avec une conséquence directe :
 
 </details>
 
+<details>
+<summary><b>Pourquoi certaines anomalies arrêtent le pipeline et d'autres non ?</b></summary>
+
+Parce qu'une anomalie sur le fichier et une anomalie sur une ligne ne disent pas la même chose.
+Le [contrat de données](docs/contrat_donnees.md) distingue trois niveaux :
+
+- **Bloquant** quand c'est la structure qui casse : encodage illisible, colonne absente ou
+  renommée, clé en double, mois disparus de l'historique. Continuer produirait des chiffres faux
+  sur tout le jeu de données : le pipeline s'arrête avec un message qui nomme le problème.
+- **Quarantaine** quand une ligne isolée est incohérente : la ligne est écartée, conservée avec
+  son motif de rejet, et comptée dans le rapport. Exemple réel : de janvier à mars 2025, la
+  source publie 43 nombres de trains **négatifs** (jusqu'à −44). Bloquer tout le pipeline pour
+  ça rendrait l'historique inexploitable ; les laisser passer fausserait les moyennes.
+- **Avertissement** quand l'écart est sans conséquence : colonnes dans un ordre différent,
+  séparateur changé mais sans ambiguïté.
+
+Le garde-fou qui relie les deux premiers niveaux : au-delà de 2 % de lignes en quarantaine, le
+pipeline bloque, parce qu'une anomalie massive n'est plus une erreur de saisie mais un
+changement de format. Aujourd'hui, 79 lignes sur 12 544 sont écartées, soit 0,63 %.
+
+</details>
+
 ## Licence
 
 MIT — voir [LICENSE](LICENSE).
