@@ -182,6 +182,31 @@ changement de format. Aujourd'hui, 79 lignes sur 12 544 sont écartées, soit 0,
 
 </details>
 
+<details>
+<summary><b>Comment l'ingestion garantit-elle qu'on peut la relancer sans risque ?</b></summary>
+
+Par deux propriétés, chacune prouvée par un test.
+
+**Idempotence : relancer ne duplique rien.** Chaque export téléchargé est résumé par son
+empreinte SHA-256, enregistrée dans les métadonnées du millésime. Au passage suivant, le
+pipeline compare l'empreinte du nouveau téléchargement à celle du dernier millésime : identique,
+il n'écrit rien ; différente, il archive un nouveau millésime sans toucher aux précédents.
+J'ai d'abord vérifié que l'export SNCF est déterministe (trois téléchargements successifs, même
+empreinte) : sinon chaque passage aurait semblé nouveau et l'idempotence par empreinte aurait
+été impossible.
+
+**Atomicité : un échec ne laisse jamais un état à moitié écrit.** Un millésime est écrit dans
+un dossier temporaire, puis renommé en une seule opération : il existe entièrement ou pas du
+tout. Le fichier de métadonnées est écrit en dernier et sert de certificat de complétude. Si le
+processus est tué en plein milieu, le dossier temporaire restant est supprimé au lancement
+suivant. Les tests simulent un disque plein au moment du renommage et une interruption brutale,
+puis vérifient que bronze ne contient rien de partiel.
+
+Bronze conserve le CSV d'origine plutôt qu'une conversion en Parquet : un fichier illisible doit
+pouvoir être archivé, justement pour prouver ce que la source a envoyé.
+
+</details>
+
 ## Licence
 
 MIT — voir [LICENSE](LICENSE).

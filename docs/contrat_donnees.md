@@ -135,8 +135,12 @@ entre ces deux colonnes, et aucun indicateur gold ne s'appuie sur leur différen
 
 ### 5.1 Bronze
 
-- Un dossier par téléchargement : `bronze/extrait_le=AAAA-MM-JJ/`, contenant le fichier reçu
-  **tel quel**, plus un fichier de métadonnées (URL, date et heure, empreinte SHA-256, taille).
+- Un dossier par téléchargement : `bronze/extrait_le=AAAA-MM-JJTHHMMSSZ/` (horodatage UTC),
+  contenant le fichier reçu **tel quel**, plus un fichier de métadonnées (URL, date et heure,
+  empreinte SHA-256, taille). L'heure figure dans le nom pour que deux publications différentes
+  le même jour ne se marchent pas dessus.
+- Bronze conserve le **CSV d'origine**, pas une conversion en Parquet : un fichier illisible
+  doit pouvoir être archivé, justement pour prouver ce que la source a envoyé.
 - Jamais modifié, jamais écrasé.
 - Si l'empreinte est identique à celle du dernier millésime, rien n'est ajouté : la source n'a
   pas changé.
