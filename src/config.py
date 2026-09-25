@@ -23,6 +23,10 @@ DELAI_TELECHARGEMENT = 60  # secondes
 ENCODAGE_SOURCE = "utf-8-sig"
 SEPARATEUR_SOURCE = ";"
 
+# --- Seuils de validation (voir docs/contrat_donnees.md) ---
+LIGNES_MIN_PAR_MOIS = 100  # observe : 121 a 135 liaisons par mois
+TAUX_MAX_QUARANTAINE = 0.02  # au-dela, la source a probablement change de format
+
 # --- Couches de donnees (architecture medallion) ---
 DOSSIER_DONNEES = RACINE / "donnees"
 BRONZE = DOSSIER_DONNEES / "bronze"  # fichiers recus tels quels, un dossier par millesime

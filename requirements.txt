@@ -1,9 +1,10 @@
 # Execution du pipeline
 pandas>=2.2
 pyarrow>=17.0      # lecture et ecriture Parquet
+pandera>=0.33      # validation du schema
 requests>=2.32
 
-# Les outils des etapes suivantes (pandera, dbt-duckdb, dagster) seront ajoutes
+# Les outils des etapes suivantes (dbt-duckdb, dagster) seront ajoutes
 # au moment ou ils servent.
 
 # Developpement (versions figees aussi dans la CI)
