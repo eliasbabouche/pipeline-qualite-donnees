@@ -10,10 +10,9 @@ secrets.toml
 .streamlit/secrets.toml
 
 # --- Données : jamais versionnées ---
-donnees/brut/*
-!donnees/brut/README.md
-donnees/traite/*
-!donnees/traite/.gitkeep
+donnees/bronze/
+donnees/silver/
+donnees/gold/
 *.csv
 *.xlsx
 *.parquet

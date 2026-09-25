@@ -10,19 +10,24 @@ from pathlib import Path
 # machine : le code doit tourner chez quelqu'un d'autre et dans la CI).
 RACINE = Path(__file__).resolve().parent.parent
 
+# --- Source ---
+# Export complet (snapshot) : chaque telechargement contient tout l'historique.
+URL_SOURCE = (
+    "https://ressources.data.sncf.com/api/explore/v2.1/catalog/datasets/"
+    "regularite-mensuelle-tgv-aqst/exports/csv"
+)
+DELAI_TELECHARGEMENT = 60  # secondes
+
+# --- Format attendu de la source (voir docs/contrat_donnees.md) ---
+# utf-8-sig : lit l'UTF-8 et retire le BOM s'il est present, sans rien faire sinon.
+ENCODAGE_SOURCE = "utf-8-sig"
+SEPARATEUR_SOURCE = ";"
+
+# --- Couches de donnees (architecture medallion) ---
 DOSSIER_DONNEES = RACINE / "donnees"
-DONNEES_BRUT = DOSSIER_DONNEES / "brut"
-DONNEES_TRAITE = DOSSIER_DONNEES / "traite"
+BRONZE = DOSSIER_DONNEES / "bronze"  # fichiers recus tels quels, un dossier par millesime
+SILVER = DOSSIER_DONNEES / "silver"  # donnees validees et typees, en Parquet
+GOLD = DOSSIER_DONNEES / "gold"  # agregats prets a lire
 
-# --- Format des exports ---
-# Ces trois parametres sont la cause la plus frequente d'un import casse en aval.
-# Les fixer explicitement, ne jamais se reposer sur les valeurs par defaut de pandas.
-ENCODAGE_EXPORT = "utf-8-sig"  # utf-8-sig pour qu'Excel affiche correctement les accents
-SEPARATEUR_EXPORT = ";"  # convention francaise
-FORMAT_DATE = "%Y-%m-%d"
-
-
-def creer_dossiers() -> None:
-    """Cree l'arborescence de donnees si elle n'existe pas encore."""
-    for dossier in (DONNEES_BRUT, DONNEES_TRAITE):
-        dossier.mkdir(parents=True, exist_ok=True)
+NOM_FICHIER_BRUT = "source.csv"
+NOM_METADONNEES = "metadonnees.json"
