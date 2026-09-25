@@ -207,6 +207,36 @@ pouvoir être archivé, justement pour prouver ce que la source a envoyé.
 
 </details>
 
+<details>
+<summary><b>Que se passe-t-il si la SNCF change le format du fichier sans prévenir ?</b></summary>
+
+Chaque changement plausible a un comportement défini et un test qui le vérifie. Le principe :
+**tolérer ce qui est sans ambiguïté, bloquer ce qui est ambigu.**
+
+| Changement | Réaction | Pourquoi |
+|---|---|---|
+| encodage latin-1 au lieu d'UTF-8 | bloquant, avec l'octet fautif et sa position | deviner l'encodage peut corrompre les accents sans erreur visible |
+| séparateur `,` au lieu de `;` | lecture adaptée + avertissement | le séparateur est validé par les colonnes qu'il produit : aucune ambiguïté |
+| colonnes dans un autre ordre | aucun effet | les colonnes sont toujours lues par leur nom |
+| colonne renommée | bloquant, en nommant l'ancienne et la nouvelle | un chiffre attribué à la mauvaise colonne serait faux sans bruit |
+| clé en double | bloquant, sans dédoublonnage | choisir une des deux lignes reviendrait à inventer la donnée |
+| mois disparus depuis le dernier export | bloquant | signe d'une republication partielle ou tronquée |
+| lignes incohérentes | quarantaine, bloquant au-delà de 2 % | une erreur isolée n'arrête pas tout ; une erreur massive, si |
+
+Exemple réel : si la colonne `nb_train_prevu` devient `nb_trains_prevus`, le pipeline s'arrête
+avec :
+
+```
+ErreurContrat: Colonne(s) obligatoire(s) absente(s) : nb_train_prevu.
+Colonne(s) inconnue(s) presente(s) : nb_trains_prevus -- renommage probable cote source.
+```
+
+Dans tous les cas bloquants, rien n'est écrit : silver est construit à côté puis mis en place par
+renommage, donc l'ancienne version reste intacte et consultable. Une fois la cause corrigée, une
+reconstruction depuis bronze (*backfill*) suffit, sans rien retélécharger.
+
+</details>
+
 ## Licence
 
 MIT — voir [LICENSE](LICENSE).
