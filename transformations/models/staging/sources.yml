@@ -5,9 +5,13 @@ sources:
     description: >
       Donnees validees par le pipeline Python (lecture, schema pandera, quarantaine),
       en Parquet partitionne par mois. Voir docs/contrat_donnees.md.
-    meta:
-      # dbt-duckdb lit directement les fichiers Parquet : pas d'import prealable.
-      external_location: "read_parquet('../donnees/silver/{name}/*/*.parquet', hive_partitioning = true)"
     tables:
       - name: trajets_mensuels
         description: Une ligne par liaison, par mois et par type de service (National / International).
+        meta:
+          # dbt-duckdb lit directement les fichiers Parquet : pas d'import prealable.
+          external_location: "read_parquet('../donnees/silver/trajets_mensuels/*/*.parquet', hive_partitioning = true)"
+      - name: trajets_mensuels_quarantaine
+        description: Lignes ecartees par la validation, avec leur motif de rejet.
+        meta:
+          external_location: "read_parquet('../donnees/silver/trajets_mensuels_quarantaine.parquet')"

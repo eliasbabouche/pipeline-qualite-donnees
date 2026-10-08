@@ -1,0 +1,54 @@
+version: 2
+
+models:
+  - name: regularite_liaisons_mensuelle
+    description: Regularite de chaque liaison TGV, mois par mois. Fichier donnees/gold/*.parquet.
+    columns:
+      - name: id_liaison_mois
+        data_tests: [unique, not_null]
+      - name: mois
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('regularite_nationale_mensuelle')
+                field: mois
+      - name: taux_annulation
+        description: Annulations / trains prevus. Vide si aucun train n'etait prevu.
+        data_tests:
+          - entre_bornes: {arguments: {min_value: 0, max_value: 1}}
+      - name: taux_retard_arrivee
+        description: Trains en retard a l'arrivee / trains ayant circule.
+        data_tests:
+          - entre_bornes: {arguments: {min_value: 0, max_value: 1}}
+      - name: taux_retard_sup_15
+        data_tests:
+          - entre_bornes: {arguments: {min_value: 0, max_value: 1}}
+
+  - name: regularite_nationale_mensuelle
+    description: >
+      Regularite de l'ensemble du reseau TGV, mois par mois. nb_liaisons_en_quarantaine
+      signale les mois ou des liaisons manquent au calcul.
+    columns:
+      - name: mois
+        data_tests: [unique, not_null]
+      - name: taux_retard_arrivee
+        data_tests:
+          - not_null
+          - entre_bornes: {arguments: {min_value: 0, max_value: 1}}
+      - name: taux_annulation
+        data_tests:
+          - entre_bornes: {arguments: {min_value: 0, max_value: 1}}
+
+  - name: regularite_liaisons_annuelle
+    description: >
+      Regularite de chaque liaison par annee, pour classer les liaisons. nb_mois indique si
+      l'annee est complete.
+    columns:
+      - name: id_liaison_annee
+        data_tests: [unique, not_null]
+      - name: nb_mois
+        data_tests:
+          - entre_bornes: {arguments: {min_value: 1, max_value: 12}}
+      - name: taux_retard_arrivee
+        data_tests:
+          - entre_bornes: {arguments: {min_value: 0, max_value: 1}}

@@ -9,7 +9,16 @@ test-paths: ["tests"]
 macro-paths: ["macros"]
 clean-targets: ["target", "dbt_packages"]
 
+flags:
+  send_anonymous_usage_stats: false
+
 models:
   transformations:
     staging:
       +materialized: view  # une vue : aucune copie des donnees, juste une requete nommee
+    intermediaire:
+      +materialized: view
+    gold:
+      # external : chaque modele devient un fichier Parquet dans donnees/gold/,
+      # lisible par n'importe quel outil sans passer par DuckDB.
+      +materialized: external

@@ -12,7 +12,8 @@ secrets.toml
 # --- Données : jamais versionnées ---
 donnees/bronze/
 donnees/silver/
-donnees/gold/
+donnees/gold/*
+!donnees/gold/.gitkeep
 *.csv
 *.xlsx
 *.parquet
@@ -65,3 +66,6 @@ transformations/target/
 transformations/dbt_packages/
 transformations/logs/
 logs/
+
+# Identifiant anonyme genere par dbt
+transformations/.user.yml

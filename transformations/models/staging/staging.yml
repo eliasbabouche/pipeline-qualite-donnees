@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: stg_trajets_mensuels
+    description: >
+      Silver renomme et type, sans calcul. Une ligne par liaison, par mois et par service.
+    columns:
+      - name: mois
+        description: Periode mensuelle au format AAAA-MM.
+        data_tests: [not_null]
+      - name: service
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["National", "International"]
+      - name: gare_depart
+        data_tests: [not_null]
+      - name: gare_arrivee
+        data_tests: [not_null]
+      - name: nb_trains_prevus
+        data_tests: [not_null]
+      - name: retard_moyen_trains_en_retard_min
+        description: >
+          Retard moyen des SEULS trains en retard (colonne SNCF retard_moyen_arrivee),
+          a ne pas confondre avec le retard moyen de tous les trains.
+
+  - name: stg_quarantaine
+    description: Lignes ecartees par la validation Python, avec leur motif de rejet.
+    columns:
+      - name: motif_rejet
+        data_tests: [not_null]

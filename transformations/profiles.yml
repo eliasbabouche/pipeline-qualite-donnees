@@ -7,3 +7,4 @@ transformations:
       type: duckdb
       path: ../donnees/entrepot.duckdb
       threads: 4
+      external_root: ../donnees/gold  # ou sont ecrits les modeles gold (Parquet)

@@ -1,0 +1,23 @@
+version: 2
+
+models:
+  - name: int_liaisons_mensuelles
+    description: >
+      Une ligne par liaison et par mois. Les lignes National et International d'une meme
+      liaison sont fusionnees : comptes additionnes, moyennes ponderees par le nombre de trains.
+    columns:
+      - name: id_liaison_mois
+        description: Cle de la table (mois | depart > arrivee).
+        data_tests: [unique, not_null]
+      - name: nb_lignes_source
+        description: 1 en general, 2 quand la liaison etait publiee en National + International.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2]
+                quote: false
+      - name: nb_trains_circules
+        description: Trains prevus moins trains annules.
+        data_tests:
+          - entre_bornes:
+              arguments: {min_value: 0, max_value: 100000}
