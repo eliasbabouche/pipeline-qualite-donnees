@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: silver
+    description: >
+      Donnees validees par le pipeline Python (lecture, schema pandera, quarantaine),
+      en Parquet partitionne par mois. Voir docs/contrat_donnees.md.
+    meta:
+      # dbt-duckdb lit directement les fichiers Parquet : pas d'import prealable.
+      external_location: "read_parquet('../donnees/silver/{name}/*/*.parquet', hive_partitioning = true)"
+    tables:
+      - name: trajets_mensuels
+        description: Une ligne par liaison, par mois et par type de service (National / International).

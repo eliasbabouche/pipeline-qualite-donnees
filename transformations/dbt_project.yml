@@ -1,0 +1,15 @@
+# Projet dbt : transformations SQL de silver vers gold.
+# Lancement depuis ce dossier : dbt build (modeles + tests), dbt docs generate.
+name: transformations
+version: "1.0.0"
+profile: transformations  # connexion definie dans profiles.yml, a cote de ce fichier
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+clean-targets: ["target", "dbt_packages"]
+
+models:
+  transformations:
+    staging:
+      +materialized: view  # une vue : aucune copie des donnees, juste une requete nommee

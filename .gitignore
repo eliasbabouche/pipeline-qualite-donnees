@@ -57,3 +57,11 @@ build/
 Thumbs.db
 desktop.ini
 ~$*
+
+# --- dbt et DuckDB ---
+*.duckdb
+*.duckdb.wal
+transformations/target/
+transformations/dbt_packages/
+transformations/logs/
+logs/

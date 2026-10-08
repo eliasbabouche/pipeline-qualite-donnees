@@ -2,10 +2,11 @@
 pandas>=2.2
 pyarrow>=17.0      # lecture et ecriture Parquet
 pandera>=0.33      # validation du schema
+dbt-duckdb>=1.11   # transformations SQL (installe aussi dbt-core et duckdb)
 requests>=2.32
 
-# Les outils des etapes suivantes (dbt-duckdb, dagster) seront ajoutes
-# au moment ou ils servent.
+# Dagster sera ajoute
+# au moment ou il servira.
 
 # Developpement (versions figees aussi dans la CI)
 pytest==9.1.1

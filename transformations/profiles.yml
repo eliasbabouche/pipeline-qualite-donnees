@@ -1,0 +1,9 @@
+# Connexion a la base. Aucun secret : DuckDB est un simple fichier local.
+# Les chemins sont relatifs au dossier transformations/, d'ou dbt est lance.
+transformations:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      path: ../donnees/entrepot.duckdb
+      threads: 4
