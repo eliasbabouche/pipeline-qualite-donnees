@@ -17,6 +17,7 @@ with trajets as (
 
 select
     mois || ' | ' || gare_depart || ' > ' || gare_arrivee   as id_liaison_mois,
+    gare_depart || ' > ' || gare_arrivee                    as id_liaison,
     mois,
     cast(left(mois, 4) as integer)                          as annee,
     gare_depart,

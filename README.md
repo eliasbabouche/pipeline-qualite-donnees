@@ -16,8 +16,8 @@
 valide ligne par ligne, construit les tables d'analyse et publie un rapport en français en tête
 de l'exécution. Relancé sur une source inchangée, il ne réécrit rien. Sur le millésime du
 8 octobre 2026, **79 lignes sur 12 907 (0,61 %) sont écartées** avec leur motif, dont 43 nombres
-de trains négatifs publiés par la source entre janvier et mars 2025 ; 95 tests (68 en Python,
-27 dans dbt) vérifient la chaîne, dont la conservation exacte des 3 508 693 trains prévus d'un
+de trains négatifs publiés par la source entre janvier et mars 2025 ; 106 tests (68 en Python,
+38 dans dbt) vérifient la chaîne, dont la conservation exacte des 3 508 693 trains prévus d'un
 bout à l'autre.
 
 **Ce qu'il mesure.** De janvier à septembre 2026, **18,7 % des TGV sont arrivés en retard**,
@@ -62,8 +62,9 @@ Les données ne sont pas versionnées : le pipeline les télécharge (voir Exéc
    téléchargement ; une empreinte SHA-256 identique au dernier millésime n'écrit rien.
 2. **Silver** : lecture robuste (encodage, séparateur, colonnes par nom), validation pandera
    ligne par ligne avec quarantaine, puis Parquet partitionné par mois.
-3. **Gold** : modèles SQL dbt sur DuckDB, testés à chaque exécution ; les comptes sont
-   additionnés et les moyennes recalculées en pondérant par le nombre de trains.
+3. **Gold** : modèles SQL dbt sur DuckDB, testés à chaque exécution, organisés en **modèle en
+   étoile** (une table de faits, deux dimensions) avec deux tables d'agrégats par-dessus ; les
+   comptes sont additionnés et les moyennes recalculées en pondérant par le nombre de trains.
 4. **Orchestration** : Dagster enchaîne les trois couches, réessaie le téléchargement, s'arrête
    net sur une rupture de contrat ; GitHub Actions le lance chaque mois et garde la mémoire d'un
    mois sur l'autre par artefact.
@@ -74,6 +75,52 @@ Généré par dbt à partir des dépendances déclarées dans le SQL : en vert l
 en bleu les modèles, à droite les deux tests qui vérifient la cohérence des calculs.
 
 ![Graphe de lignage dbt](docs/lignage_dbt.png)
+
+### Modèle de données (gold)
+
+Un **modèle en étoile** : au centre, la table de faits (une ligne par liaison et par mois, avec
+les mesures), reliée par ses clés aux dimensions qui décrivent le « quoi » et le « quand ». Les
+deux tables d'agrégats lues par l'analyste sont construites en joignant les faits à leurs
+dimensions ; des tests dbt de relations garantissent que chaque clé des faits existe dans sa
+dimension.
+
+```mermaid
+erDiagram
+    dim_liaisons ||--o{ fct_regularite_mensuelle : "id_liaison"
+    dim_mois ||--o{ fct_regularite_mensuelle : "mois"
+    dim_liaisons {
+        string id_liaison PK
+        string gare_depart
+        string gare_arrivee
+        string premier_mois
+        string dernier_mois
+    }
+    dim_mois {
+        string mois PK
+        int annee
+        int numero_mois
+        int trimestre
+        string libelle
+    }
+    fct_regularite_mensuelle {
+        string id_liaison_mois PK
+        string id_liaison FK
+        string mois FK
+        int nb_trains_prevus
+        int nb_annulations
+        int nb_trains_retard_arrivee
+        float retard_moyen_tous_trains_min
+        float taux_retard_arrivee
+    }
+```
+
+| Table | Rôle | Lignes |
+|---|---|---:|
+| `fct_regularite_mensuelle` | faits : une ligne par liaison et par mois | 12 786 |
+| `dim_liaisons` | dimension : une ligne par liaison (gare de départ → gare d'arrivée) | 130 |
+| `dim_mois` | dimension calendrier : année, trimestre, libellé | 105 |
+| `regularite_nationale_mensuelle` | agrégat : tout le réseau, par mois | 105 |
+| `regularite_liaisons_annuelle` | agrégat : chaque liaison, par année, pour classer | 1 105 |
 
 ### Orchestration
 
@@ -120,9 +167,9 @@ faut faire. Une fois la cause corrigée, une reconstruction depuis bronze (*back
 | `tests/test_orchestration.py` | 6 | graphe relié de bronze à gold, réessais réservés au réseau, arrêt sur erreur de contrat |
 | `tests/test_rapport.py` | 8 | rapport de succès et d'échec, traduction des motifs, erreur remontée jusqu'au rapport |
 | `tests/test_config.py` | 3 | paramètres de lecture explicites |
-| dbt : `unique`, `not_null`, `accepted_values`, `relationships` | 17 | clés uniques à chaque niveau, services autorisés, cohérence entre tables gold |
-| dbt : `entre_bornes` (test maison) | 8 | taux entre 0 et 1, nombres de trains positifs, mois par an entre 1 et 12 |
-| dbt : `conservation_des_trains` | 1 | le total des trains prévus est identique du staging aux trois tables gold |
+| dbt : `unique`, `not_null`, `accepted_values`, `relationships` | 27 | clés uniques à chaque niveau, services autorisés, chaque clé des faits présente dans sa dimension |
+| dbt : `entre_bornes` (test maison) | 9 | taux entre 0 et 1, nombres de trains positifs, numéros de mois entre 1 et 12 |
+| dbt : `conservation_des_trains` | 1 | le total des trains prévus est identique du staging aux faits et aux deux agrégats |
 | dbt : `moyenne_ponderee_entre_les_extremes` | 1 | une moyenne pondérée reste entre les valeurs qu'elle combine |
 
 Aucun test n'utilise le réseau : le téléchargement est simulé.
@@ -202,7 +249,7 @@ dossier `transformations/`. Documentation dbt et graphe de lignage : `dbt docs g
 
 ```powershell
 pytest                                 # 68 tests Python
-cd transformations; dbt build          # 6 modèles et 27 tests de données
+cd transformations; dbt build          # 8 modèles et 38 tests de données
 ```
 
 ## Structure
@@ -218,7 +265,7 @@ src/
   orchestration.py   assets Dagster, job et planification
   rapport.py         rapport d'exécution lisible
   executer.py        point d'entrée : pipeline + journal + rapport
-transformations/     projet dbt : staging, intermediaire, gold, tests
+transformations/     projet dbt : staging, intermediaire, gold (étoile + agrégats), tests
 tests/               tests pytest sur données volontairement dégradées
 docs/                contrat de données et captures
 donnees/             bronze, silver, gold (non versionnés)
@@ -342,11 +389,11 @@ des sommes, jamais de moyenne de moyennes.** Quand la SNCF publie Dijon → Pari
 pondérée donne 5,4 min ; la moyenne simple donnerait 5,6 min, en accordant le même poids aux deux
 groupes.
 
-Pour prouver les chiffres, 27 tests dbt, dont deux qui vérifient des propriétés mathématiques
+Pour prouver les chiffres, 38 tests dbt, dont deux qui vérifient des propriétés mathématiques
 plutôt que des formats :
 
 - **conservation des trains** : le total des trains prévus (3 508 693 au millésime du
-  8 octobre 2026) est identique à chaque étage, du staging aux trois tables gold. Une jointure
+  8 octobre 2026) est identique à chaque étage, du staging à la table de faits et aux agrégats. Une jointure
   qui duplique des lignes ou un filtre oublié le fait échouer ;
 - **moyenne pondérée encadrée** : une moyenne pondérée tombe toujours entre la plus petite et la
   plus grande des valeurs qu'elle combine ; sinon, les poids sont faux.
@@ -354,6 +401,25 @@ plutôt que des formats :
 Ces tests ont trouvé un vrai défaut : en 2020, 63 liaisons comptaient des annulations pour zéro
 train prévu, ce qui donnait un nombre de trains ayant circulé négatif. Le calcul a été corrigé
 avant que gold ne soit construit.
+
+</details>
+
+<details>
+<summary><b>Pourquoi un modèle en étoile dans la couche gold ?</b></summary>
+
+Parce qu'il sépare ce qu'on mesure de ce qui le décrit. La **table de faits** contient une ligne
+par liaison et par mois (son *grain*) et uniquement des mesures : trains prévus, annulés, en
+retard, retards moyens, plus deux clés. Les **dimensions** portent les descriptions : la liaison
+(gares de départ et d'arrivée, premier et dernier mois publiés), le mois (année, trimestre,
+libellé). Une analyse part des faits et joint les dimensions dont elle a besoin : les deux tables
+d'agrégats du projet sont construites exactement ainsi.
+
+Ce que ça apporte : une description ne vit qu'à un endroit (renommer une gare, ajouter un
+attribut au calendrier ne touche qu'une dimension), et c'est le format qu'attendent les outils
+de restitution comme Power BI. Le risque classique est la jointure qui multiplie les lignes, si
+une dimension contient deux fois la même clé : les tests dbt vérifient que chaque clé de
+dimension est unique, que chaque clé des faits existe dans sa dimension, et que le total des
+trains reste identique avant et après les jointures.
 
 </details>
 

@@ -22,8 +22,11 @@ def test_graphe_relie_bronze_silver_et_dbt():
     assert graphe.get(dg.AssetKey("stg_trajets_mensuels")).parent_keys == cles(
         "silver/trajets_mensuels"
     )
+    # Modele en etoile : faits, dimensions et agregats sont tous des assets du graphe.
     assert cles(
-        "regularite_liaisons_mensuelle",
+        "fct_regularite_mensuelle",
+        "dim_liaisons",
+        "dim_mois",
         "regularite_nationale_mensuelle",
         "regularite_liaisons_annuelle",
     ) <= graphe.get_all_asset_keys()

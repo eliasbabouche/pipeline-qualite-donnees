@@ -1,5 +1,7 @@
 -- Test singulier : aucune agregation ne doit perdre ni dupliquer un train.
 -- Le total des trains prevus doit etre identique a chaque etage de la chaine.
+-- Les jointures faits -> dimensions des agregats sont couvertes : une dimension en double
+-- multiplierait les trains.
 -- Une jointure mal ecrite (lignes dupliquees) ou un filtre oublie ferait echouer ce test.
 
 with totaux as (
@@ -9,7 +11,7 @@ with totaux as (
     union all
     select 'intermediaire', sum(nb_trains_prevus) from {{ ref('int_liaisons_mensuelles') }}
     union all
-    select 'gold liaisons', sum(nb_trains_prevus) from {{ ref('regularite_liaisons_mensuelle') }}
+    select 'gold faits', sum(nb_trains_prevus) from {{ ref('fct_regularite_mensuelle') }}
     union all
     select 'gold national', sum(nb_trains_prevus) from {{ ref('regularite_nationale_mensuelle') }}
     union all

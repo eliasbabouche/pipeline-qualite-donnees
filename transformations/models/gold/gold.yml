@@ -1,16 +1,31 @@
 version: 2
 
+# Modele en etoile : une table de faits (fct_) entouree de dimensions (dim_),
+# puis des agregats prets a lire construits par-dessus.
+
 models:
-  - name: regularite_liaisons_mensuelle
-    description: Regularite de chaque liaison TGV, mois par mois. Fichier donnees/gold/*.parquet.
+  - name: fct_regularite_mensuelle
+    description: >
+      Table de faits. Grain : une ligne par liaison et par mois. Cles vers dim_liaisons et
+      dim_mois, mesures additives (nombres de trains) et moyennes ponderees.
     columns:
       - name: id_liaison_mois
         data_tests: [unique, not_null]
-      - name: mois
+      - name: id_liaison
+        description: Cle etrangere vers dim_liaisons.
         data_tests:
+          - not_null
           - relationships:
               arguments:
-                to: ref('regularite_nationale_mensuelle')
+                to: ref('dim_liaisons')
+                field: id_liaison
+      - name: mois
+        description: Cle etrangere vers dim_mois.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_mois')
                 field: mois
       - name: taux_annulation
         description: Annulations / trains prevus. Vide si aucun train n'etait prevu.
@@ -24,9 +39,34 @@ models:
         data_tests:
           - entre_bornes: {arguments: {min_value: 0, max_value: 1}}
 
+  - name: dim_liaisons
+    description: Dimension liaisons. Une ligne par couple gare de depart -> gare d'arrivee.
+    columns:
+      - name: id_liaison
+        data_tests: [unique, not_null]
+      - name: gare_depart
+        data_tests: [not_null]
+      - name: gare_arrivee
+        data_tests: [not_null]
+
+  - name: dim_mois
+    description: Dimension calendrier. Une ligne par mois present dans les donnees.
+    columns:
+      - name: mois
+        data_tests: [unique, not_null]
+      - name: numero_mois
+        data_tests:
+          - entre_bornes: {arguments: {min_value: 1, max_value: 12}}
+      - name: trimestre
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4]
+                quote: false
+
   - name: regularite_nationale_mensuelle
     description: >
-      Regularite de l'ensemble du reseau TGV, mois par mois. nb_liaisons_en_quarantaine
+      Agregat. Regularite de l'ensemble du reseau TGV, mois par mois. nb_liaisons_en_quarantaine
       signale les mois ou des liaisons manquent au calcul.
     columns:
       - name: mois
@@ -41,8 +81,8 @@ models:
 
   - name: regularite_liaisons_annuelle
     description: >
-      Regularite de chaque liaison par annee, pour classer les liaisons. nb_mois indique si
-      l'annee est complete.
+      Agregat. Regularite de chaque liaison par annee, pour classer les liaisons. nb_mois
+      indique si l'annee est complete.
     columns:
       - name: id_liaison_annee
         data_tests: [unique, not_null]
