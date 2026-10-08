@@ -1,0 +1,69 @@
+name: Pipeline mensuel
+
+# Execute le pipeline complet chaque mois, sans intervention.
+# La machine GitHub demarre vide : la memoire d'un mois sur l'autre (millesimes bronze,
+# etat de silver) passe par un artefact, recupere au debut et republie a la fin.
+
+on:
+  schedule:
+    - cron: "0 5 10 * *"  # le 10 de chaque mois a 5 h UTC (6 h ou 7 h a Paris)
+  workflow_dispatch:  # lancement manuel depuis l'onglet Actions
+
+permissions:
+  contents: read
+  actions: read  # lire les artefacts des executions precedentes
+
+jobs:
+  pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer les dependances
+        run: pip install -r requirements.txt
+
+      - name: Recuperer l'etat de la derniere execution reussie
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ID=$(gh run list --workflow pipeline_mensuel.yml --status success --limit 1 \
+               --json databaseId --jq '.[0].databaseId')
+          if [ -n "$ID" ]; then
+            gh run download "$ID" --name etat-pipeline --dir donnees
+            echo "Etat recupere depuis l'execution $ID."
+          else
+            echo "Aucune execution reussie precedente : demarrage a vide."
+          fi
+
+      - name: Executer le pipeline
+        run: python -m src.executer
+
+      # Uniquement en cas de succes : un mois en echec ne remplace jamais le dernier etat sain.
+      - name: Sauvegarder l'etat pour le mois prochain
+        uses: actions/upload-artifact@v4
+        with:
+          name: etat-pipeline
+          path: |
+            donnees/bronze
+            donnees/silver
+          retention-days: 90
+
+      - name: Publier les resultats (tables gold, rapport, journal)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultats-${{ github.run_number }}
+          path: |
+            donnees/gold/*.parquet
+            donnees/rapport_execution.md
+            donnees/journal.jsonl
+          if-no-files-found: ignore
+          retention-days: 90

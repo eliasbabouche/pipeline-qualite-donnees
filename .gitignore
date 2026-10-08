@@ -73,3 +73,7 @@ transformations/.user.yml
 # --- Dagster : historique local des executions ---
 .tmp_dagster_home_*/
 .dagster/
+
+# --- Sorties d execution (rapport et journal) ---
+donnees/rapport_execution.md
+donnees/journal.jsonl
