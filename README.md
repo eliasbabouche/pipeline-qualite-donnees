@@ -1,60 +1,60 @@
-﻿# pipeline-qualite-donnees
+# pipeline-qualite-donnees
 
 [![Tests](https://github.com/eliasbabouche/pipeline-qualite-donnees/actions/workflows/tests.yml/badge.svg)](https://github.com/eliasbabouche/pipeline-qualite-donnees/actions/workflows/tests.yml)
-[![Démo](https://img.shields.io/badge/démo-en%20ligne-brightgreen)](LIEN-DE-LA-DEMO)
-[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/eliasbabouche/pipeline-qualite-donnees/blob/main/notebooks/01_restitution.ipynb)
+[![Pipeline mensuel](https://github.com/eliasbabouche/pipeline-qualite-donnees/actions/workflows/pipeline_mensuel.yml/badge.svg)](https://github.com/eliasbabouche/pipeline-qualite-donnees/actions/workflows/pipeline_mensuel.yml)
 
-> Pipeline de données mensuel en couches bronze/silver/gold sur la régularité des TGV : ingestion idempotente, validation pandera, dbt, Dagster
-
-<!--
-  Ordre imposé : le résultat AVANT la méthode. Un lecteur donne 20 secondes à ce fichier.
-  Remplacer chaque section, puis supprimer ces commentaires.
--->
+> Un pipeline de données qui tourne seul chaque mois, ne casse pas quand la source change de
+> format, et prouve que ses chiffres sont justes. Appliqué à la régularité des TGV (open data
+> SNCF) : architecture bronze / silver / gold, ingestion idempotente, validation pandera,
+> transformations dbt, orchestration Dagster, exécution planifiée dans GitHub Actions.
 
 ## Résultat
 
-<!--
-  Un résultat NUANCÉ et chiffré, pas un slogan. « 9 villes sur 10, mais résultat contrasté
-  sur les maisons, avec deux exceptions » est crédible ; « les prix explosent » ne l'est pas.
-  Les chiffres cités ici doivent être EXACTEMENT ceux du notebook et du dashboard.
--->
+![Rapport d'exécution affiché en tête de chaque exécution mensuelle](docs/rapport_execution.png)
 
-![Aperçu](docs/apercu.png)
+**Le pipeline.** Chaque 10 du mois, GitHub Actions télécharge l'export SNCF, l'archive, le
+valide ligne par ligne, construit les tables d'analyse et publie un rapport en français en tête
+de l'exécution. Relancé sur une source inchangée, il ne réécrit rien. Sur le millésime du
+8 octobre 2026, **79 lignes sur 12 907 (0,61 %) sont écartées** avec leur motif, dont 43 nombres
+de trains négatifs publiés par la source entre janvier et mars 2025 ; 95 tests (68 en Python,
+27 dans dbt) vérifient la chaîne, dont la conservation exacte des 3 508 693 trains prévus d'un
+bout à l'autre.
 
-**Démo en ligne** : <lien Streamlit Cloud ou Hugging Face Spaces>
+**Ce qu'il mesure.** De janvier à septembre 2026, **18,7 % des TGV sont arrivés en retard**,
+contre 14,3 % sur la même période de 2025 : c'est le niveau le plus élevé depuis 2018 (18,4 %),
+et le meilleur reste 2021 (10,4 %). Les écarts entre liaisons sont forts : en 2025, parmi les
+liaisons d'au moins 1 000 trains, Paris → Stuttgart arrive en retard une fois sur deux (56,5 %),
+Lausanne → Paris une fois sur quatorze (7,4 %).
 
-**Notebook de restitution** : [`notebooks/01_restitution.ipynb`](notebooks/01_restitution.ipynb)
-— lisible directement sur GitHub, graphiques compris.
+| Janvier → septembre | 2018 | 2019 | 2020 | 2021 | 2022 | 2023 | 2024 | 2025 | 2026 |
+|---|---|---|---|---|---|---|---|---|---|
+| TGV en retard à l'arrivée | 18,4 % | 13,1 % | 12,2 % | 10,4 % | 14,3 % | 14,4 % | 13,6 % | 14,3 % | **18,7 %** |
 
 ## Données
 
 | | |
 |---|---|
-| Source | <nom + lien> |
-| Millésime | <version figée, ex. 2025-12 — jamais « latest »> |
-| Volume | <nombre de lignes / poids> |
-| Période | <plage temporelle couverte> |
-| Licence | <Licence Ouverte / CC-BY / …> |
+| Source | [Régularité mensuelle TGV par liaisons](https://ressources.data.sncf.com/explore/dataset/regularite-mensuelle-tgv-aqst/) (SNCF Voyageurs) |
+| Millésime | **mis à jour chaque mois par construction** ; les chiffres de ce README portent sur le millésime du 8 octobre 2026 |
+| Volume | 12 907 lignes, 26 colonnes, 2,9 Mo ; environ 121 liaisons par mois |
+| Période | janvier 2018 → septembre 2026 (105 mois) |
+| Licence | Licence Ouverte / Open Licence (Etalab) |
+| Contrat | [`docs/contrat_donnees.md`](docs/contrat_donnees.md) : colonnes, types, règles, clé, seuils |
 
-Les données brutes ne sont pas versionnées. Pour les récupérer :
+Une ligne décrit une liaison (gare de départ → gare d'arrivée), pour un mois et un type de
+service : trains prévus, annulés, en retard au départ et à l'arrivée, retards moyens, causes.
 
-```bash
-python src/telecharger_donnees.py
-```
+Les données ne sont pas versionnées : le pipeline les télécharge (voir Exécution).
 
-### Entonnoir du nettoyage
+### Entonnoir
 
-<!--
-  Le tableau qui montre combien de lignes survivent à chaque filtre. C'est la preuve
-  visible du travail de nettoyage, et le garde-fou contre une perte massive non vue.
--->
-
-| Étape | Lignes restantes | % du départ |
+| Étape | Lignes | % du départ |
 |---|---:|---:|
-| Données brutes | | 100 % |
-| <filtre 1> | | |
-| <filtre 2> | | |
-| **Retenu pour l'analyse** | | |
+| Lignes lues (bronze) | 12 907 | 100 % |
+| Écartées en quarantaine, avec motif | − 79 | |
+| **Retenues (silver)** | **12 828** | **99,4 %** |
+| Fusion National + International de juillet à septembre 2025 (aucun train perdu) | − 42 | |
+| Liaisons-mois (gold) | 12 786 | |
 
 ## Méthode
 
@@ -62,7 +62,11 @@ python src/telecharger_donnees.py
    téléchargement ; une empreinte SHA-256 identique au dernier millésime n'écrit rien.
 2. **Silver** : lecture robuste (encodage, séparateur, colonnes par nom), validation pandera
    ligne par ligne avec quarantaine, puis Parquet partitionné par mois.
-3. **Gold** : modèles SQL dbt sur DuckDB, testés à chaque exécution.
+3. **Gold** : modèles SQL dbt sur DuckDB, testés à chaque exécution ; les comptes sont
+   additionnés et les moyennes recalculées en pondérant par le nombre de trains.
+4. **Orchestration** : Dagster enchaîne les trois couches, réessaie le téléchargement, s'arrête
+   net sur une rupture de contrat ; GitHub Actions le lance chaque mois et garde la mémoire d'un
+   mois sur l'autre par artefact.
 
 ### Lignage des données
 
@@ -78,64 +82,148 @@ chaque modèle dbt y devient un asset, rangé dans le groupe de sa couche.
 
 ![Graphe des assets Dagster](docs/graphe_dagster.png)
 
+## Ce qui se passe quand la source change
+
+Chaque changement plausible a un comportement défini et un test qui le vérifie. Le principe :
+**tolérer ce qui est sans ambiguïté, bloquer ce qui est ambigu.**
+
+| Changement | Réaction | Pourquoi |
+|---|---|---|
+| encodage latin-1 au lieu d'UTF-8 | bloquant, avec l'octet fautif et sa position | deviner l'encodage peut corrompre les accents sans erreur visible |
+| séparateur `,` au lieu de `;` | lecture adaptée + avertissement | le séparateur est validé par les colonnes qu'il produit |
+| colonnes dans un autre ordre | aucun effet | les colonnes sont toujours lues par leur nom |
+| colonne renommée ou supprimée | bloquant, en nommant l'ancienne et la nouvelle | un chiffre attribué à la mauvaise colonne serait faux sans bruit |
+| clé en double | bloquant, sans dédoublonnage | choisir une des deux lignes reviendrait à inventer la donnée |
+| mois disparus depuis le dernier export | bloquant | signe d'une republication partielle ou tronquée |
+| lignes incohérentes | quarantaine, bloquant au-delà de 2 % | une erreur isolée n'arrête pas tout ; une erreur massive, si |
+| plantage en pleine écriture | aucun état partiel | chaque couche est écrite à côté puis mise en place par renommage |
+
+Exemple : si la colonne `nb_train_prevu` devient `nb_trains_prevus`, le pipeline s'arrête avec
+
+```
+ErreurContrat: Colonne(s) obligatoire(s) absente(s) : nb_train_prevu.
+Colonne(s) inconnue(s) presente(s) : nb_trains_prevus -- renommage probable cote source.
+```
+
+et le rapport de l'exécution indique que les données précédentes restent intactes et ce qu'il
+faut faire. Une fois la cause corrigée, une reconstruction depuis bronze (*backfill*,
+`python -m src.silver --forcer`) suffit, sans rien retélécharger.
+
+## Tests de données
+
+| Où | Nombre | Ce qu'ils protègent |
+|---|---:|---|
+| `tests/test_ingestion.py` | 8 | idempotence (deux passages = un seul millésime), plantage simulé pendant l'écriture, reprise après interruption |
+| `tests/test_lecture.py` | 11 | un test par piège de format : latin-1, virgule, colonne renommée, supprimée, déplacée, en trop, retours à la ligne dans un champ |
+| `tests/test_validation.py` | 22 | chaque règle de quarantaine, dont les anomalies réelles de 2019 et 2025 ; clé en double, mois manquant, mois incomplet, seuil de 2 % |
+| `tests/test_silver.py` | 10 | partitions, backfill, et trois échecs qui laissent l'ancien silver intact |
+| `tests/test_orchestration.py` | 6 | graphe relié de bronze à gold, réessais réservés au réseau, arrêt sur erreur de contrat |
+| `tests/test_rapport.py` | 8 | rapport de succès et d'échec, traduction des motifs, erreur remontée jusqu'au rapport |
+| `tests/test_config.py` | 3 | paramètres de lecture explicites |
+| dbt : `unique`, `not_null`, `accepted_values`, `relationships` | 17 | clés uniques à chaque niveau, services autorisés, cohérence entre tables gold |
+| dbt : `entre_bornes` (test maison) | 8 | taux entre 0 et 1, nombres de trains positifs, mois par an entre 1 et 12 |
+| dbt : `conservation_des_trains` | 1 | le total des trains prévus est identique du staging aux trois tables gold |
+| dbt : `moyenne_ponderee_entre_les_extremes` | 1 | une moyenne pondérée reste entre les valeurs qu'elle combine |
+
+Aucun test n'utilise le réseau : le téléchargement est simulé.
+
 ## Deux choix de méthode qui changent le résultat
 
-<!--
-  Les réponses d'entretien, écrites en AFFIRMATIONS à puces, pas en questions.
-  Prendre les deux décisions qui, si on les avait prises autrement, auraient donné
-  un résultat différent. C'est ce qu'un recruteur technique va creuser.
--->
+**Écarter les lignes incohérentes plutôt que bloquer ou laisser passer.**
 
-**<Le premier choix>**
+- Une ligne qui viole une règle métier part en quarantaine avec son motif ; au-delà de 2 % de
+  lignes écartées, le pipeline bloque, car une anomalie massive signale un changement de format.
+- Bloquer à la première anomalie aurait arrêté le pipeline chaque mois depuis janvier 2025
+  (43 nombres de trains négatifs publiés par la source) ; laisser passer aurait fait entrer ces
+  valeurs dans les moyennes. Le coût est assumé et visible : en janvier 2025, le taux national
+  porte sur 103 liaisons au lieu de 121, et la table gold le signale.
 
-- <ce qui a été décidé, et pourquoi>
-- <ce que donnerait l'autre option, chiffré si possible>
+**Additionner les comptes, puis recalculer les moyennes.**
 
-**<Le second choix>**
-
-- <idem>
+- Quand une liaison est publiée en deux lignes (National et International), les nombres de
+  trains sont additionnés et les retards moyens recalculés en pondérant par le nombre de trains.
+- Une moyenne simple des deux lignes donnerait 5,6 min au lieu de 5,4 min pour Dijon → Paris en
+  juillet 2025 ; dédoublonner ces lignes aurait retiré environ 7 000 trains. Un test dbt vérifie
+  que le total des trains est conservé d'un bout à l'autre, un autre que chaque moyenne pondérée
+  reste encadrée.
 
 ## Limites connues
 
-- <biais des données, période non couverte, hypothèse fragile>
+- **La définition du retard dépend de la durée du trajet** (5 min sous 1 h 30, 10 min jusqu'à
+  3 h, 15 min au-delà, selon la SNCF) : comparer les taux de liaisons de durées très différentes
+  revient à comparer des seuils différents.
+- **Les liaisons en quarantaine sont absentes des taux de leur mois** (11 à 18 liaisons de
+  janvier à mars 2025). La table nationale les compte (`nb_liaisons_en_quarantaine`) sans les
+  corriger.
+- **Les colonnes « plus de 30 min » et « plus de 60 min » ne sont pas emboîtées** dans 354 lignes ;
+  la source ne documente pas leur définition exacte, donc aucun indicateur ne s'appuie sur leur
+  différence.
+- **Une correction rétroactive de la SNCF est adoptée sans rapport de différences** : silver
+  repart du dernier millésime, l'ancien reste consultable en bronze.
+- **GitHub désactive les workflows planifiés après 60 jours sans activité sur le dépôt**, et les
+  artefacts qui portent la mémoire expirent après 90 jours : trois mois d'échec consécutifs font
+  repartir le pipeline à vide, sans contrôle de couverture pour cette exécution-là.
+- Bronze conserve le CSV d'origine et non du Parquet : c'est voulu, un fichier illisible devant
+  pouvoir être archivé pour prouver ce que la source a envoyé.
 
 ## Ce qui a été difficile, et ce que j'en retiens
 
-<!--
-  Section courte et honnête. Elle vaut autant que le code : elle montre qu'on a
-  rencontré le réel, pas suivi un tutoriel.
--->
-
-- <la difficulté, comment elle a été résolue, ce qu'elle a appris>
+- **La source réelle était plus sale que prévu.** Un découpage National / International sur
+  trois mois, des nombres de trains négatifs, des liaisons à zéro train prévu mais avec des
+  annulations en 2020. Aucune de ces anomalies ne produit d'erreur : elles ne se voient qu'en
+  mesurant chaque colonne avant d'écrire la moindre règle. Le contrat de données s'appuie donc
+  sur des chiffres constatés, et les anomalies connues y sont listées une par une.
+- **Les tests ont trouvé des bugs que je n'avais pas vus.** Un fichier dont toutes les lignes
+  partaient en quarantaine produisait une erreur pandas incompréhensible ; un test dbt a révélé
+  63 nombres de trains ayant circulé négatifs ; et l'un de mes propres tests d'encodage était
+  faux, ce que seule la lecture attentive du message d'échec a montré. D'où la contre-épreuve
+  systématique.
+- **Une machine de CI n'a pas de mémoire.** Lancer le pipeline dans GitHub Actions était simple ;
+  lui faire garder les millésimes d'un mois sur l'autre ne l'était pas. La solution par artefact,
+  republié seulement en cas de succès, a été vérifiée en lançant le workflow deux fois de suite.
 
 ## Exécution
 
-```bash
+Python 3.12, sous Windows (PowerShell) ; remplacer `.venv\Scripts\Activate.ps1` par
+`source .venv/bin/activate` sous Linux ou macOS.
+
+```powershell
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-streamlit run app.py
+
+python -m src.executer                 # pipeline complet + rapport dans donnees/rapport_execution.md
+dagster dev -m src.orchestration       # interface Dagster sur http://localhost:3000
 ```
 
-## Tests
+Étape par étape : `python -m src.ingestion`, `python -m src.silver`, puis `dbt build` depuis le
+dossier `transformations/`. Documentation dbt et graphe de lignage : `dbt docs generate` puis
+`dbt docs serve`.
 
-```bash
-pytest
+```powershell
+pytest                                 # 68 tests Python
+cd transformations; dbt build          # 6 modèles et 27 tests de données
 ```
 
 ## Structure
 
 ```
-app.py        point d'entrée de l'application (à la RACINE : sinon l'import de src échoue)
-src/          code métier, une responsabilité par module
-tests/        tests unitaires
-notebooks/    restitution : importe depuis src/, ne contient pas de logique métier
-donnees/      brut/ et traite/ non versionnés ; reference/ et agrege/ versionnés (petits)
+src/
+  config.py          chemins, URL de la source, seuils
+  contrat.py         le contrat de données en code : colonnes, types, clé
+  ingestion.py       bronze : téléchargement, empreinte, écriture atomique
+  lecture.py         encodage, séparateur, colonnes par nom
+  validation.py      schéma pandera, quarantaine, contrôles bloquants
+  silver.py          silver : Parquet partitionné, remplacement atomique, backfill
+  orchestration.py   assets Dagster, job et planification
+  rapport.py         rapport d'exécution lisible
+  executer.py        point d'entrée : pipeline + journal + rapport
+transformations/     projet dbt : staging, intermediaire, gold, tests
+tests/               tests pytest sur données volontairement dégradées
+docs/                contrat de données et captures
+donnees/             bronze, silver, gold (non versionnés)
+.github/workflows/   tests à chaque push, pipeline chaque mois
 ```
-
-Le code vit dans `src/` et reste testable ; le notebook importe depuis `src/` et raconte
-l'histoire. Ses sorties sont volontairement conservées dans le fichier pour que les
-graphiques s'affichent sur GitHub sans rien exécuter.
 
 ## Questions fréquentes
 
@@ -151,7 +239,8 @@ juillet 2025, c'est 186 trains « International » plus 220 « National ».
 
 Sans cette vérification, le pipeline aurait soit échoué sans explication, soit, pire, dédoublonné
 en silence et retiré environ 7 000 trains des statistiques. La clé
-`date + gare_depart + gare_arrivee + service` (zéro conflit sur 12 544 lignes) est donc écrite
+`date + gare_depart + gare_arrivee + service` (zéro conflit sur l'export du 24 septembre 2026,
+12 544 lignes) est donc écrite
 dans le contrat de données, et un test d'unicité fait échouer le pipeline au lieu de corriger en
 douce.
 
@@ -163,13 +252,13 @@ douce.
 Quatre constats, chacun avec une conséquence directe :
 
 - **Le fichier commence par un BOM UTF-8.** Il est lu en `utf-8-sig` ; sinon la première colonne
-  s'appelle `﻿date` et tout accès à `date` échoue.
+  s'appelle date précédé de trois octets invisibles, et tout accès à `date` échoue.
 - **La colonne `date` est un mois (`2025-07`), pas une date.** Elle reste une période mensuelle
   et sert de clé de partition ; la convertir en date inventerait un « 1er du mois » absent des
   données.
 - **Les commentaires contiennent des retours à la ligne entre guillemets.** Le fichier fait
-  15 062 lignes physiques pour 12 544 lignes de données : les lignes ne se comptent jamais à la
-  main, seulement via un lecteur CSV qui gère les guillemets.
+  15 062 lignes physiques pour 12 544 lignes de données (export du 24 septembre 2026) : les
+  lignes ne se comptent jamais à la main, seulement via un lecteur CSV qui gère les guillemets.
 - **Chaque export contient tout l'historique depuis 2018.** C'est un *snapshot*, pas un *delta* :
   chaque téléchargement est archivé tel quel en bronze, et silver est reconstruit à partir du
   plus récent.
@@ -194,7 +283,8 @@ Le [contrat de données](docs/contrat_donnees.md) distingue trois niveaux :
 
 Le garde-fou qui relie les deux premiers niveaux : au-delà de 2 % de lignes en quarantaine, le
 pipeline bloque, parce qu'une anomalie massive n'est plus une erreur de saisie mais un
-changement de format. Aujourd'hui, 79 lignes sur 12 544 sont écartées, soit 0,63 %.
+changement de format. Au millésime du 8 octobre 2026, 79 lignes sur 12 907 sont écartées, soit
+0,61 %.
 
 </details>
 
@@ -226,30 +316,14 @@ pouvoir être archivé, justement pour prouver ce que la source a envoyé.
 <details>
 <summary><b>Que se passe-t-il si la SNCF change le format du fichier sans prévenir ?</b></summary>
 
-Chaque changement plausible a un comportement défini et un test qui le vérifie. Le principe :
-**tolérer ce qui est sans ambiguïté, bloquer ce qui est ambigu.**
-
-| Changement | Réaction | Pourquoi |
-|---|---|---|
-| encodage latin-1 au lieu d'UTF-8 | bloquant, avec l'octet fautif et sa position | deviner l'encodage peut corrompre les accents sans erreur visible |
-| séparateur `,` au lieu de `;` | lecture adaptée + avertissement | le séparateur est validé par les colonnes qu'il produit : aucune ambiguïté |
-| colonnes dans un autre ordre | aucun effet | les colonnes sont toujours lues par leur nom |
-| colonne renommée | bloquant, en nommant l'ancienne et la nouvelle | un chiffre attribué à la mauvaise colonne serait faux sans bruit |
-| clé en double | bloquant, sans dédoublonnage | choisir une des deux lignes reviendrait à inventer la donnée |
-| mois disparus depuis le dernier export | bloquant | signe d'une republication partielle ou tronquée |
-| lignes incohérentes | quarantaine, bloquant au-delà de 2 % | une erreur isolée n'arrête pas tout ; une erreur massive, si |
-
-Exemple réel : si la colonne `nb_train_prevu` devient `nb_trains_prevus`, le pipeline s'arrête
-avec :
-
-```
-ErreurContrat: Colonne(s) obligatoire(s) absente(s) : nb_train_prevu.
-Colonne(s) inconnue(s) presente(s) : nb_trains_prevus -- renommage probable cote source.
-```
-
-Dans tous les cas bloquants, rien n'est écrit : silver est construit à côté puis mis en place par
-renommage, donc l'ancienne version reste intacte et consultable. Une fois la cause corrigée, une
-reconstruction depuis bronze (*backfill*) suffit, sans rien retélécharger.
+Le pipeline distingue ce qui est sans ambiguïté de ce qui ne l'est pas. Des colonnes dans un autre
+ordre ou un séparateur différent sont tolérés, parce que les colonnes sont lues par leur nom et
+que le séparateur est validé par les colonnes qu'il produit. Un encodage inattendu, une colonne
+renommée, une clé en double ou des mois disparus arrêtent tout, avec un message qui nomme le
+problème : continuer produirait des chiffres faux sans aucun signal. Dans tous ces cas, rien
+n'est écrit et la version précédente reste intacte ; une fois la cause corrigée, on reconstruit
+depuis bronze sans retélécharger. Le détail, cas par cas, est dans la section
+[Ce qui se passe quand la source change](#ce-qui-se-passe-quand-la-source-change).
 
 </details>
 
@@ -268,12 +342,12 @@ des sommes, jamais de moyenne de moyennes.** Quand la SNCF publie Dijon → Pari
 pondérée donne 5,4 min ; la moyenne simple donnerait 5,6 min, en accordant le même poids aux deux
 groupes.
 
-Pour prouver les chiffres, 33 tests dbt, dont deux qui vérifient des propriétés mathématiques
+Pour prouver les chiffres, 27 tests dbt, dont deux qui vérifient des propriétés mathématiques
 plutôt que des formats :
 
-- **conservation des trains** : le total des trains prévus (3 399 150) est identique à chaque
-  étage, du staging aux trois tables gold. Une jointure qui duplique des lignes ou un filtre
-  oublié le fait échouer ;
+- **conservation des trains** : le total des trains prévus (3 508 693 au millésime du
+  8 octobre 2026) est identique à chaque étage, du staging aux trois tables gold. Une jointure
+  qui duplique des lignes ou un filtre oublié le fait échouer ;
 - **moyenne pondérée encadrée** : une moyenne pondérée tombe toujours entre la plus petite et la
   plus grande des valeurs qu'elle combine ; sinon, les poids sont faux.
 
@@ -304,6 +378,28 @@ Deux décisions de conception :
   message, et un test le vérifie.
 - **Planification le 10 de chaque mois, heure de Paris**, la SNCF publiant avec environ un mois
   de décalage. Si rien n'a été publié, l'idempotence garantit qu'aucune donnée n'est réécrite.
+
+</details>
+
+<details>
+<summary><b>Comment le pipeline tourne-t-il tout seul chaque mois, et comment savoir s'il a réussi ?</b></summary>
+
+Un workflow GitHub Actions le lance le 10 de chaque mois. La difficulté : la machine démarre vide
+à chaque exécution, donc sans mémoire des millésimes précédents ; le contrôle « aucun mois ne
+doit disparaître depuis le dernier export » n'aurait alors jamais rien à comparer. La mémoire
+passe par un **artefact GitHub** : bronze et silver sont récupérés depuis la dernière exécution
+réussie au début, puis republiés à la fin, **uniquement en cas de succès**, pour qu'un mois en
+échec ne remplace jamais le dernier état sain. Je l'ai vérifié en lançant le workflow deux fois
+de suite : la seconde exécution a récupéré l'état de la première et conclu « aucune nouvelle
+publication », sans rien réécrire.
+
+Pour savoir s'il a réussi, chaque exécution produit un **rapport en français** affiché en tête de
+la page GitHub : statut, millésime traité, lignes lues, retenues et écartées avec leurs motifs
+traduits (« valeur négative dans … » plutôt que `greater_than_or_equal_to(0)`), et les chiffres
+clés du dernier mois. En cas d'échec, le rapport cite l'erreur, rappelle que les données
+précédentes sont intactes et dit quoi faire ; la CI passe au rouge, ce qui déclenche un mail.
+En parallèle, un journal JSON (une ligne par événement) garde la trace technique, exploitable
+par un programme.
 
 </details>
 

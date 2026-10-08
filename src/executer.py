@@ -12,6 +12,7 @@ import os
 import sys
 import time
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -73,7 +74,8 @@ def executer() -> Execution:
     # Import tardif : charger les definitions Dagster prepare le projet dbt.
     from src.orchestration import defs
 
-    debut = datetime.now()
+    # Heure de Paris : la machine GitHub Actions tourne en UTC.
+    debut = datetime.now(ZoneInfo("Europe/Paris"))
     chrono = time.monotonic()
     resultat = defs.get_job_def("pipeline_mensuel").execute_in_process(raise_on_error=False)
     execution = Execution(
