@@ -58,9 +58,18 @@ python src/telecharger_donnees.py
 
 ## Méthode
 
-1. <étape>
-2. <étape>
-3. <étape>
+1. **Bronze** : l'export SNCF est archivé octet pour octet, un dossier horodaté par
+   téléchargement ; une empreinte SHA-256 identique au dernier millésime n'écrit rien.
+2. **Silver** : lecture robuste (encodage, séparateur, colonnes par nom), validation pandera
+   ligne par ligne avec quarantaine, puis Parquet partitionné par mois.
+3. **Gold** : modèles SQL dbt sur DuckDB, testés à chaque exécution.
+
+### Lignage des données
+
+Généré par dbt à partir des dépendances déclarées dans le SQL : en vert les sources (silver),
+en bleu les modèles, à droite les deux tests qui vérifient la cohérence des calculs.
+
+![Graphe de lignage dbt](docs/lignage_dbt.png)
 
 ## Deux choix de méthode qui changent le résultat
 
@@ -234,6 +243,36 @@ Colonne(s) inconnue(s) presente(s) : nb_trains_prevus -- renommage probable cote
 Dans tous les cas bloquants, rien n'est écrit : silver est construit à côté puis mis en place par
 renommage, donc l'ancienne version reste intacte et consultable. Une fois la cause corrigée, une
 reconstruction depuis bronze (*backfill*) suffit, sans rien retélécharger.
+
+</details>
+
+<details>
+<summary><b>Pourquoi dbt, et comment prouver que les chiffres de gold sont justes ?</b></summary>
+
+dbt transforme le SQL en code géré comme du logiciel. Chaque table est un fichier `.sql` qui ne
+contient qu'un `SELECT` ; les `ref()` entre fichiers déclarent les dépendances, dont dbt déduit
+l'ordre d'exécution et le graphe de lignage. Les tests de données sont déclarés à côté des
+modèles et s'exécutent avec eux : `dbt build` refuse de construire une table si un test en amont
+échoue, donc une donnée fausse ne se propage pas jusqu'à gold.
+
+La règle de calcul centrale : **additionner les comptes, puis recalculer les moyennes à partir
+des sommes, jamais de moyenne de moyennes.** Quand la SNCF publie Dijon → Paris en deux lignes
+(186 trains internationaux à 8,5 min de retard moyen, 220 nationaux à 2,8 min), la moyenne
+pondérée donne 5,4 min ; la moyenne simple donnerait 5,6 min, en accordant le même poids aux deux
+groupes.
+
+Pour prouver les chiffres, 33 tests dbt, dont deux qui vérifient des propriétés mathématiques
+plutôt que des formats :
+
+- **conservation des trains** : le total des trains prévus (3 399 150) est identique à chaque
+  étage, du staging aux trois tables gold. Une jointure qui duplique des lignes ou un filtre
+  oublié le fait échouer ;
+- **moyenne pondérée encadrée** : une moyenne pondérée tombe toujours entre la plus petite et la
+  plus grande des valeurs qu'elle combine ; sinon, les poids sont faux.
+
+Ces tests ont trouvé un vrai défaut : en 2020, 63 liaisons comptaient des annulations pour zéro
+train prévu, ce qui donnait un nombre de trains ayant circulé négatif. Le calcul a été corrigé
+avant que gold ne soit construit.
 
 </details>
 
