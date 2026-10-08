@@ -71,6 +71,13 @@ en bleu les modèles, à droite les deux tests qui vérifient la cohérence des 
 
 ![Graphe de lignage dbt](docs/lignage_dbt.png)
 
+### Orchestration
+
+Dagster exécute l'ensemble comme un seul graphe d'assets, de l'export SNCF aux tables gold :
+chaque modèle dbt y devient un asset, rangé dans le groupe de sa couche.
+
+![Graphe des assets Dagster](docs/graphe_dagster.png)
+
 ## Deux choix de méthode qui changent le résultat
 
 <!--
@@ -273,6 +280,30 @@ plutôt que des formats :
 Ces tests ont trouvé un vrai défaut : en 2020, 63 liaisons comptaient des annulations pour zéro
 train prévu, ce qui donnait un nombre de trains ayant circulé négatif. Le calcul a été corrigé
 avant que gold ne soit construit.
+
+</details>
+
+<details>
+<summary><b>Pourquoi Dagster plutôt qu'un script qui enchaîne les étapes ?</b></summary>
+
+Un script `main.py` qui appelle l'ingestion, puis silver, puis dbt fonctionne, jusqu'au premier
+problème : il ne sait pas quoi réessayer, ne garde aucun historique et ne montre pas où la chaîne
+s'est arrêtée. Un orchestrateur prend en charge ces trois points.
+
+J'ai choisi Dagster plutôt qu'Airflow, l'outil le plus répandu en entreprise, parce qu'il raisonne
+en **assets**, les données produites, plutôt qu'en tâches. Je déclare que silver dépend de bronze
+et Dagster en déduit l'ordre, exactement comme dbt avec ses `ref()`. L'intégration dagster-dbt
+transforme chaque modèle dbt en asset : le pipeline forme un seul graphe, de l'export SNCF aux
+tables gold, à moitié Python et à moitié SQL, raccordé par le nom de la source dbt.
+
+Deux décisions de conception :
+
+- **Réessayer seulement ce qui peut réussir au deuxième essai.** Le téléchargement est réessayé
+  trois fois à une minute d'intervalle (site lent, coupure). Une erreur de contrat ne l'est
+  jamais : le même fichier donnerait la même erreur. Le pipeline s'arrête aussitôt avec le
+  message, et un test le vérifie.
+- **Planification le 10 de chaque mois, heure de Paris**, la SNCF publiant avec environ un mois
+  de décalage. Si rien n'a été publié, l'idempotence garantit qu'aucune donnée n'est réécrite.
 
 </details>
 

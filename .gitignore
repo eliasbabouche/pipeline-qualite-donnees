@@ -69,3 +69,7 @@ logs/
 
 # Identifiant anonyme genere par dbt
 transformations/.user.yml
+
+# --- Dagster : historique local des executions ---
+.tmp_dagster_home_*/
+.dagster/

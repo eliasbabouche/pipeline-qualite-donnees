@@ -4,9 +4,9 @@ pyarrow>=17.0      # lecture et ecriture Parquet
 pandera>=0.33      # validation du schema
 dbt-duckdb>=1.11   # transformations SQL (installe aussi dbt-core et duckdb)
 requests>=2.32
-
-# Dagster sera ajoute
-# au moment ou il servira.
+dagster>=1.13           # orchestration : assets, planification, reessais
+dagster-dbt>=0.29       # transforme chaque modele dbt en asset Dagster
+dagster-webserver>=1.13 # interface web (dagster dev)
 
 # Developpement (versions figees aussi dans la CI)
 pytest==9.1.1
