@@ -8,6 +8,11 @@
 > SNCF) : architecture bronze / silver / gold, ingestion idempotente, validation pandera,
 > transformations dbt, orchestration Dagster, exécution planifiée dans GitHub Actions.
 
+**Dernier passage du pipeline : [`docs/dernier_rapport.md`](docs/dernier_rapport.md)**, commité
+par le workflow à chaque exécution mensuelle.
+
+**Fiche du projet sur mon site : [eliasbabouche.vercel.app/fr/projets/pipeline-qualite-donnees](https://eliasbabouche.vercel.app/fr/projets/pipeline-qualite-donnees)**
+
 ## Résultat
 
 ![Rapport d'exécution affiché en tête de chaque exécution mensuelle](docs/rapport_execution.png)
@@ -207,9 +212,10 @@ Aucun test n'utilise le réseau : le téléchargement est simulé.
   différence.
 - **Une correction rétroactive de la SNCF est adoptée sans rapport de différences** : silver
   repart du dernier millésime, l'ancien reste consultable en bronze.
-- **GitHub désactive les workflows planifiés après 60 jours sans activité sur le dépôt**, et les
-  artefacts qui portent la mémoire expirent après 90 jours : trois mois d'échec consécutifs font
-  repartir le pipeline à vide, sans contrôle de couverture pour cette exécution-là.
+- **GitHub désactive les workflows planifiés après 60 jours sans activité sur le dépôt** : le
+  rapport commité à chaque passage sert aussi à maintenir cette activité. Les artefacts qui
+  portent la mémoire expirent après 90 jours : trois mois d'échec consécutifs font repartir le
+  pipeline à vide, sans contrôle de couverture pour cette exécution-là.
 - Bronze conserve le CSV d'origine et non du Parquet : c'est voulu, un fichier illisible devant
   pouvoir être archivé pour prouver ce que la source a envoyé.
 
@@ -267,7 +273,7 @@ src/
   executer.py        point d'entrée : pipeline + journal + rapport
 transformations/     projet dbt : staging, intermediaire, gold (étoile + agrégats), tests
 tests/               tests pytest sur données volontairement dégradées
-docs/                contrat de données et captures
+docs/                contrat de données, captures, dernier rapport d'exécution
 donnees/             bronze, silver, gold (non versionnés)
 .github/workflows/   tests à chaque push, pipeline chaque mois
 ```

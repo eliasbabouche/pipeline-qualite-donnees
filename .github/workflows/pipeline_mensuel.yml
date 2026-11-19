@@ -10,7 +10,7 @@ on:
   workflow_dispatch:  # lancement manuel depuis l'onglet Actions
 
 permissions:
-  contents: read
+  contents: write  # commiter le dernier rapport dans le depot
   actions: read  # lire les artefacts des executions precedentes
 
 jobs:
@@ -67,3 +67,25 @@ jobs:
             donnees/journal.jsonl
           if-no-files-found: ignore
           retention-days: 90
+
+      # Le rapport est commite a chaque passage, reussi ou non : il reste lisible quand les
+      # artefacts ont expire, et ce commit mensuel est une activite du depot (GitHub desactive
+      # les workflows planifies apres 60 jours sans activite).
+      # Pas de boucle : un push fait avec le jeton du workflow ne declenche aucun workflow.
+      - name: Commiter le dernier rapport dans le depot
+        if: always()
+        run: |
+          if [ ! -f donnees/rapport_execution.md ]; then
+            echo "Aucun rapport produit : rien a commiter."
+            exit 0
+          fi
+          cp donnees/rapport_execution.md docs/dernier_rapport.md
+          git add docs/dernier_rapport.md
+          if git diff --cached --quiet; then
+            echo "Rapport identique au precedent : rien a commiter."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "met a jour le dernier rapport d'execution ($(date -u +%F))"
+          git push

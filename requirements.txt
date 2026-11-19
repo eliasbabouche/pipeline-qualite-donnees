@@ -1,12 +1,12 @@
-# Execution du pipeline
-pandas>=2.2
-pyarrow>=17.0      # lecture et ecriture Parquet
-pandera>=0.33      # validation du schema
-dbt-duckdb>=1.11   # transformations SQL (installe aussi dbt-core et duckdb)
-requests>=2.32
-dagster>=1.13           # orchestration : assets, planification, reessais
-dagster-dbt>=0.29       # transforme chaque modele dbt en asset Dagster
-dagster-webserver>=1.13 # interface web (dagster dev)
+# Execution du pipeline (versions figees sur celles qui font passer les tests)
+pandas==3.1.1
+pyarrow==26.0.1    # lecture et ecriture Parquet
+pandera==0.36.0    # validation du schema
+dbt-duckdb==1.11.1 # transformations SQL (installe aussi dbt-core et duckdb)
+requests==2.34.2
+dagster==1.13.30           # orchestration : assets, planification, reessais
+dagster-dbt==0.29.30       # transforme chaque modele dbt en asset Dagster
+dagster-webserver==1.13.30 # interface web (dagster dev)
 
 # Developpement (versions figees aussi dans la CI)
 pytest==9.1.1
