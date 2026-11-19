@@ -1,6 +1,6 @@
 # ✅ Pipeline réussi
 
-Exécution du 19/11/2026 à 15:08, durée 8 s.
+Exécution du 20/11/2026 à 00:19, durée 11 s.
 
 ## Source
 - SNCF : aucune nouvelle publication depuis le dernier passage
