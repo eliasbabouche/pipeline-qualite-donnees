@@ -1,10 +1,10 @@
 # ✅ Pipeline réussi
 
-Exécution du 19/11/2026 à 13:20, durée 29 s.
+Exécution du 19/11/2026 à 15:08, durée 8 s.
 
 ## Source
 - SNCF : aucune nouvelle publication depuis le dernier passage
-- Millésime traité : `2026-10-08T190844Z`
+- Millésime traité : `2026-10-08T193441Z`
 - Période couverte : 2018-01 → 2026-09 (105 mois)
 
 ## Contrôle qualité
